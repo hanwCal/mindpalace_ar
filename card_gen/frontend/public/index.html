@@ -5,9 +5,82 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>memory cards</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f5f7fa;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .banner {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: white;
+      padding: 1rem 2rem;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .banner h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    .nav-buttons {
+      display: flex;
+      gap: 1rem;
+    }
+    .nav-button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background-color 0.2s;
+    }
+    .nav-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    #root {
+      padding: 2rem;
+      flex: 1;
+      display: flex;
+    }
+    #root > div {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      gap: 2rem;
+      height: 100%;
+      width: 100%;
+    }
+    #root > div > div {
+      flex: 1;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      border: 1px solid #6366f1;
+      min-height: 70vh;
+      display: flex;
+      flex-direction: column;
+    }
+  </style>
 </head>
 
 <body>
+  <div class="banner">
+    <h1>MindPalace AR</h1>
+    <div class="nav-buttons">
+      <button class="nav-button">About</button>
+      <button class="nav-button">Help</button>
+      <button class="nav-button">Past Queries</button>
+    </div>
+  </div>
   <div id="root"></div>
 </body>
 

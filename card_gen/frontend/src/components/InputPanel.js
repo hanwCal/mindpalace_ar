@@ -18,7 +18,7 @@ function InputPanel({ prompt, setPrompt, handleGenerate, isLoading }) {
 
     return (
         <div style={{ flex: 0.5, marginRight: "20px" }}>
-            <h2>What do you want to learn about?</h2>
+            <h2>What would you like to explore?</h2>
             <input
                 type="text"
                 value={prompt}
