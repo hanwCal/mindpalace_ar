@@ -121,6 +121,47 @@ function App() {
         URL.revokeObjectURL(url);
     };
 
+    const handleFileUpload = async (files) => {
+        if (requestInProgress.current) return;
+        
+        requestInProgress.current = true;
+        setIsLoading(true);
+        
+        try {
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+            
+            console.log("Sending files to:", `${BACKEND_URL}/upload-files`);
+            const response = await axios.post(`${BACKEND_URL}/upload-files`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            
+            console.log("File upload response:", response.data);
+            setNotes((prevNotes) => [...prevNotes, ...response.data]);
+        } catch (error) {
+            console.error("Error uploading files", error);
+            let errorMessage = "Unknown error";
+
+            if (error.response) {
+                errorMessage = `Server error: ${error.response.status} - ${error.response.statusText}`;
+                console.error("Error response data:", error.response.data);
+            } else if (error.request) {
+                errorMessage = "No response received from server";
+            } else {
+                errorMessage = error.message;
+            }
+
+            alert(`Error uploading files: ${errorMessage}`);
+        } finally {
+            setIsLoading(false);
+            requestInProgress.current = false;
+        }
+    };
+
     return (
         <div style={{ display: "flex", padding: "20px", maxWidth: "1200px", margin: "0 auto", gap: "40px" }}>
             <div>
@@ -129,6 +170,7 @@ function App() {
                     setPrompt={setPrompt}
                     handleGenerate={handleGenerate}
                     isLoading={isLoading}
+                    onFileUpload={handleFileUpload}
                 />
             </div>
             <NotesList

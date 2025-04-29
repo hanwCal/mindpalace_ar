@@ -1,10 +1,16 @@
 import json
 import os
+import tempfile
+import uuid
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from typing import List
 from openai import OpenAI
+import PyPDF2
+import docx
+from pptx import Presentation
 
 # load env variables
 load_dotenv()
@@ -121,6 +127,84 @@ async def generate_notes(request: Request):
         last_id += 1
 
     return cards
+
+
+@app.post("/upload-files")
+async def upload_files(files: List[UploadFile] = File(...)):
+    global last_id
+    cards = []
+    
+    for file in files:
+        file_content = await process_file(file)
+        if file_content:
+            # Create a prompt based on the file content
+            file_prompt = f"Generate notes from this content: {file_content[:1000]}..."
+            
+            # Process the content with GPT
+            for title, content in query_gpt(file_prompt):
+                cards.append(
+                    {
+                        "id": last_id,
+                        "title": title,
+                        "content": content,
+                    }
+                )
+                last_id += 1
+    
+    return cards
+
+async def process_file(file: UploadFile):
+    try:
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp_file:
+            # Write uploaded file content to the temp file
+            content = await file.read()
+            temp_file.write(content)
+            temp_file_path = temp_file.name
+        
+        # Extract text based on file type
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        extracted_text = ""
+        
+        if file_extension == '.pdf':
+            # Process PDF
+            with open(temp_file_path, 'rb') as pdf_file:
+                pdf_reader = PyPDF2.PdfReader(pdf_file)
+                for page_num in range(len(pdf_reader.pages)):
+                    page = pdf_reader.pages[page_num]
+                    extracted_text += page.extract_text() + "\n"
+        
+        elif file_extension in ['.docx', '.doc']:
+            # Process Word document
+            doc = docx.Document(temp_file_path)
+            for para in doc.paragraphs:
+                extracted_text += para.text + "\n"
+        
+        elif file_extension in ['.pptx', '.ppt']:
+            # Process PowerPoint
+            prs = Presentation(temp_file_path)
+            for slide in prs.slides:
+                for shape in slide.shapes:
+                    if hasattr(shape, "text"):
+                        extracted_text += shape.text + "\n"
+        
+        elif file_extension in ['.mp4', '.mov', '.avi']:
+            # For video files, just acknowledge we can't process them directly
+            # In a real implementation, you might use a transcription service
+            extracted_text = f"Content from video file: {file.filename}. Video content requires transcription services."
+        
+        else:
+            # For other file types, read as text if possible
+            extracted_text = content.decode('utf-8', errors='ignore')
+        
+        # Clean up temp file
+        os.unlink(temp_file_path)
+        
+        return extracted_text
+    
+    except Exception as e:
+        print(f"Error processing file {file.filename}: {str(e)}")
+        return f"Error processing file {file.filename}. Please try a different file format."
 
 
 if __name__ == "__main__":
