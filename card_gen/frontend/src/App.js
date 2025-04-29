@@ -49,29 +49,58 @@ function App() {
         setIsLoading(true);
 
         try {
-            console.log("Sending request to:", `${BACKEND_URL}/generate-notes`);
-            const response = await axios.post(`${BACKEND_URL}/generate-notes`, { prompt });
-            console.log("Response received:", response.data);
-            setNotes((prevNotes) => [...prevNotes, ...response.data]);
+            // Use Reagent Noggin API instead of the backend
+            console.log("Sending request to Reagent Noggin API");
+            const response = await fetch(
+                'https://noggin.rea.gent/chosen-mollusk-9962',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer rg_v1_zmstww0es8el30r7z3v5v979nu7hsbpplrt6_ngk',
+                    },
+                    body: JSON.stringify({
+                        "topic": prompt,
+                    }),
+                }
+            );
+            
+            const responseText = await response.text();
+            console.log("Reagent response received:", responseText);
+            
+            // Parse the response to create note cards
+            // Assuming the response is a formatted text that needs to be converted to cards
+            const generatedNotes = processResponseIntoCards(responseText, prompt);
+            
+            setNotes((prevNotes) => [...prevNotes, ...generatedNotes]);
             setPrompt("");
         } catch (error) {
             console.error("Error generating notes", error);
-            let errorMessage = "Unknown error";
-
-            if (error.response) {
-                errorMessage = `Server error: ${error.response.status} - ${error.response.statusText}`;
-                console.error("Error response data:", error.response.data);
-            } else if (error.request) {
-                errorMessage = "No response received from server";
-            } else {
-                errorMessage = error.message;
-            }
-
+            let errorMessage = "Error calling Reagent Noggin API";
             alert(`Error generating notes: ${errorMessage}`);
         } finally {
             setIsLoading(false);
             requestInProgress.current = false;
         }
+    };
+    
+    // Function to process the Reagent response into card format
+    const processResponseIntoCards = (responseText, originalPrompt) => {
+        // Simple processing: Split by double newlines to separate concepts
+        // This is a basic implementation - you may need to adjust based on actual response format
+        const sections = responseText.split('\n\n').filter(section => section.trim() !== '');
+        
+        return sections.map((section, index) => {
+            // For each section, create a card with title and content
+            const lines = section.split('\n');
+            const title = lines[0] || `${originalPrompt} - Note ${index + 1}`;
+            const content = lines.slice(1).join('\n') || section;
+            
+            return {
+                title: title,
+                content: content
+            };
+        });
     };
 
     const handleDeleteNote = (index) => {
