@@ -69,10 +69,15 @@ function App() {
             console.log("Reagent response received:", responseText);
             
             // Parse the response to create note cards
-            // Assuming the response is a formatted text that needs to be converted to cards
             const generatedNotes = processResponseIntoCards(responseText, prompt);
             
-            setNotes((prevNotes) => [...prevNotes, ...generatedNotes]);
+            // Add unique IDs to each note if they don't already have one
+            const notesWithIds = generatedNotes.map(note => ({
+                ...note,
+                id: note.id || `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+            }));
+            
+            setNotes((prevNotes) => [...prevNotes, ...notesWithIds]);
             setPrompt("");
         } catch (error) {
             console.error("Error generating notes", error);
@@ -86,21 +91,107 @@ function App() {
     
     // Function to process the Reagent response into card format
     const processResponseIntoCards = (responseText, originalPrompt) => {
-        // Simple processing: Split by double newlines to separate concepts
-        // This is a basic implementation - you may need to adjust based on actual response format
-        const sections = responseText.split('\n\n').filter(section => section.trim() !== '');
-        
-        return sections.map((section, index) => {
-            // For each section, create a card with title and content
-            const lines = section.split('\n');
-            const title = lines[0] || `${originalPrompt} - Note ${index + 1}`;
-            const content = lines.slice(1).join('\n') || section;
+        try {
+            // First try to parse as JSON
+            let jsonData;
             
-            return {
-                title: title,
-                content: content
-            };
-        });
+            // Check if response contains JSON
+            // Look for JSON data in the response
+            const jsonMatch = responseText.match(/\[.*\]/s) || responseText.match(/\{.*\}/s);
+            
+            if (jsonMatch) {
+                try {
+                    jsonData = JSON.parse(jsonMatch[0]);
+                } catch (e) {
+                    console.log("Couldn't parse first JSON match, trying full response");
+                    try {
+                        jsonData = JSON.parse(responseText);
+                    } catch (e2) {
+                        console.log("Couldn't parse response as JSON, falling back to text processing");
+                    }
+                }
+            }
+            
+            // If we successfully parsed JSON
+            if (jsonData) {
+                console.log("Processed response as JSON", jsonData);
+                
+                // Handle array of objects
+                if (Array.isArray(jsonData)) {
+                    return jsonData.map(item => {
+                        // Check for different possible JSON formats
+                        if (item.title && (item.content || item.description)) {
+                            return {
+                                id: Date.now() + Math.random(),
+                                title: item.title,
+                                content: item.content || item.description
+                            };
+                        } else if (item.word || item.term) {
+                            return {
+                                id: Date.now() + Math.random(),
+                                title: item.word || item.term || item.question || `Card ${Math.floor(Math.random() * 1000)}`,
+                                content: item.definition || item.description || item.answer || item.info || ""
+                            };
+                        } else {
+                            // Handle case where we have a simple key-value object
+                            const key = Object.keys(item)[0];
+                            return {
+                                id: Date.now() + Math.random(),
+                                title: key,
+                                content: item[key]
+                            };
+                        }
+                    });
+                } 
+                // Handle object with cards array
+                else if (jsonData.cards || jsonData.flashcards) {
+                    const cardsArray = jsonData.cards || jsonData.flashcards;
+                    if (Array.isArray(cardsArray)) {
+                        return processResponseIntoCards(JSON.stringify(cardsArray), originalPrompt);
+                    }
+                }
+                // Handle single object
+                else if (typeof jsonData === 'object') {
+                    const cards = [];
+                    // Convert object keys to cards
+                    for (const key in jsonData) {
+                        if (jsonData.hasOwnProperty(key)) {
+                            cards.push({
+                                id: Date.now() + Math.random(),
+                                title: key,
+                                content: typeof jsonData[key] === 'object' 
+                                    ? JSON.stringify(jsonData[key], null, 2) 
+                                    : jsonData[key]
+                            });
+                        }
+                    }
+                    return cards;
+                }
+            }
+            
+            // Fallback to text processing if JSON parsing fails
+            const sections = responseText.split('\n\n').filter(section => section.trim() !== '');
+            
+            return sections.map((section, index) => {
+                const lines = section.split('\n');
+                const title = lines[0] || `${originalPrompt} - Note ${index + 1}`;
+                const content = lines.slice(1).join('\n') || section;
+                
+                return {
+                    id: Date.now() + Math.random(),
+                    title: title,
+                    content: content
+                };
+            });
+        } catch (error) {
+            console.error("Error processing response:", error);
+            // Return a single note with the full response if processing fails
+            return [{
+                id: Date.now(),
+                title: originalPrompt,
+                content: responseText
+            }];
+        }
     };
 
     const handleDeleteNote = (index) => {
@@ -119,17 +210,19 @@ function App() {
 
     const handleDragEnd = (result) => {
         if (!result.destination) return;
-        console.log(notes);
-        const updatedNotes = Array.from(notes);
-        const [removed] = updatedNotes.splice(result.source.index, 1);
-        updatedNotes.splice(result.destination.index, 0, removed);
-        setNotes(updatedNotes);
+        
+        const items = Array.from(notes);
+        const [reorderedItem] = items.splice(result.source.index, 1);
+        items.splice(result.destination.index, 0, reorderedItem);
+        
+        setNotes(items);
     };
 
     const handleDownloadCards = () => {
         if (notes.length === 0) return;
 
         const cardsToDownload = notes.map((note) => ({
+            id: note.id,
             title: note.title,
             content: note.content,
         }));
@@ -142,7 +235,7 @@ function App() {
         // create link to trigger download
         const link = document.createElement("a");
         link.href = url;
-        link.download = "cards.json";
+        link.download = "flashcards.json";
         document.body.appendChild(link);
         link.click();
 

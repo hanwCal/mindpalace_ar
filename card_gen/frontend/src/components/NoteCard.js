@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 function NoteCard({ note, onDelete, onUpdate, dragHandleProps }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedText, setEditedText] = useState("");
+    const [isFlipped, setIsFlipped] = useState(false);
     const textareaRef = useRef(null);
 
     useEffect(() => {
@@ -35,8 +36,39 @@ function NoteCard({ note, onDelete, onUpdate, dragHandleProps }) {
         onUpdate({ ...note, title, content });
     };
 
+    // Check if content looks like JSON and format it nicely
+    const formatContentIfJSON = (content) => {
+        if (typeof content !== 'string') return content;
+        
+        try {
+            // Check if content starts with { or [ indicating JSON
+            if ((content.trim().startsWith('{') && content.trim().endsWith('}')) || 
+                (content.trim().startsWith('[') && content.trim().endsWith(']'))) {
+                
+                const parsedContent = JSON.parse(content);
+                // Return the formatted JSON string
+                return JSON.stringify(parsedContent, null, 2);
+            }
+            return content;
+        } catch (e) {
+            // If parsing fails, just return the original content
+            return content;
+        }
+    };
+
+    const formattedContent = formatContentIfJSON(note.content);
+
     return (
-        <div style={{ position: "relative", padding: "10px", paddingLeft: "50px" }}>
+        <div 
+            style={{ 
+                position: "relative", 
+                padding: "10px", 
+                paddingLeft: "50px",
+                transition: "transform 0.6s",
+                transformStyle: "preserve-3d",
+                transform: isFlipped ? "rotateY(180deg)" : ""
+            }}
+        >
             <div
                 style={{
                     cursor: "grab",
@@ -46,6 +78,7 @@ function NoteCard({ note, onDelete, onUpdate, dragHandleProps }) {
                     border: "none",
                     background: "transparent",
                     fontSize: "18px",
+                    zIndex: 1
                 }}
             >
                 ☰
@@ -61,6 +94,7 @@ function NoteCard({ note, onDelete, onUpdate, dragHandleProps }) {
                     background: "transparent",
                     fontSize: "18px",
                     cursor: "pointer",
+                    zIndex: 1
                 }}
             >
                 ×
@@ -82,6 +116,7 @@ function NoteCard({ note, onDelete, onUpdate, dragHandleProps }) {
                             resize: "none",
                             overflow: "hidden",
                             boxSizing: "border-box",
+                            minHeight: "120px"
                         }}
                     />
                     <div
@@ -99,14 +134,42 @@ function NoteCard({ note, onDelete, onUpdate, dragHandleProps }) {
                 <div onClick={() => setIsEditing(true)} style={{ cursor: "text" }}>
                     <h3 style={{ margin: "0 0 5px 0", fontSize: "18px", paddingRight: "25px" }}>{note.title}</h3>
                     <div style={{ margin: 0, paddingRight: "25px" }}>
-                        <ReactMarkdown
-                            components={{
-                                p: ({ node, ...props }) => <p style={{ margin: 0, marginTop: "5px" }} {...props} />,
-                                ul: ({ node, ...props }) => <ul style={{ margin: 0, marginTop: "5px" }} {...props} />,
-                            }}
-                        >
-                            {note.content}
-                        </ReactMarkdown>
+                        {formattedContent.includes('```json') || formattedContent.startsWith('{') || formattedContent.startsWith('[') ? (
+                            <pre style={{ 
+                                whiteSpace: "pre-wrap", 
+                                wordBreak: "break-word",
+                                overflow: "auto", 
+                                fontSize: "14px",
+                                backgroundColor: "#f5f5f5",
+                                padding: "8px",
+                                borderRadius: "4px",
+                                maxHeight: "200px"
+                            }}>
+                                {formattedContent}
+                            </pre>
+                        ) : (
+                            <ReactMarkdown
+                                components={{
+                                    p: ({ node, ...props }) => <p style={{ margin: 0, marginTop: "5px" }} {...props} />,
+                                    ul: ({ node, ...props }) => <ul style={{ margin: 0, marginTop: "5px" }} {...props} />,
+                                    code: ({ node, inline, ...props }) => 
+                                        inline ? (
+                                            <code style={{ backgroundColor: "#f0f0f0", padding: "0.2em 0.4em", borderRadius: "3px" }} {...props} />
+                                        ) : (
+                                            <pre style={{ 
+                                                backgroundColor: "#f5f5f5", 
+                                                padding: "0.5em", 
+                                                borderRadius: "5px",
+                                                overflowX: "auto" 
+                                            }}>
+                                                <code {...props} />
+                                            </pre>
+                                        )
+                                }}
+                            >
+                                {note.content}
+                            </ReactMarkdown>
+                        )}
                     </div>
                 </div>
             )}

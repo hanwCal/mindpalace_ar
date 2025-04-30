@@ -41,9 +41,21 @@ function NotesList({ notes, onDeleteNote, onUpdateNote, onDragEnd, onDownloadCar
             <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="notes">
                     {(provided) => (
-                        <div {...provided.droppableProps} ref={provided.innerRef}>
+                        <div 
+                            {...provided.droppableProps} 
+                            ref={provided.innerRef}
+                            style={{ 
+                                maxHeight: "calc(100vh - 180px)", 
+                                overflowY: "auto",
+                                padding: "5px"
+                            }}
+                        >
                             {notes.map((note, index) => (
-                                <Draggable key={note.id} draggableId={`note-${note.id}`} index={index}>
+                                <Draggable 
+                                    key={note.id || `note-${index}`} 
+                                    draggableId={note.id ? note.id.toString() : `note-${index}`} 
+                                    index={index}
+                                >
                                     {(provided) => (
                                         <div
                                             ref={provided.innerRef}
@@ -53,6 +65,8 @@ function NotesList({ notes, onDeleteNote, onUpdateNote, onDragEnd, onDownloadCar
                                                 border: "1px solid #ccc",
                                                 marginBottom: "10px",
                                                 backgroundColor: "white",
+                                                borderRadius: "5px",
+                                                boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
                                                 ...provided.draggableProps.style,
                                             }}
                                         >
@@ -71,6 +85,18 @@ function NotesList({ notes, onDeleteNote, onUpdateNote, onDragEnd, onDownloadCar
                     )}
                 </Droppable>
             </DragDropContext>
+            {notes.length === 0 && (
+                <div style={{ 
+                    textAlign: "center", 
+                    padding: "30px", 
+                    color: "#666",
+                    border: "1px dashed #ccc",
+                    borderRadius: "5px",
+                    marginTop: "20px"
+                }}>
+                    No cards yet. Generate some cards or upload files to get started.
+                </div>
+            )}
         </div>
     );
 }
