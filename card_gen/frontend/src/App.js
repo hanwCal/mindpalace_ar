@@ -103,6 +103,7 @@ function App() {
         const cardsToDownload = notes.map((note) => ({
             title: note.title,
             content: note.content,
+            image: note.image,
         }));
 
         const jsonString = JSON.stringify(cardsToDownload, null, 2);
