@@ -7,7 +7,7 @@ import hashlib
 import requests
 from urllib.parse import urlparse, quote
 from functools import lru_cache
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Dict, Any
 import math
 import random
 from PIL import Image, ImageDraw, ImageFont
@@ -112,23 +112,44 @@ def search_wikipedia_images(topic: str, retry_count: int = 6) -> List[str]:
     """
     image_urls = []
     
-    # Try different search strategies
-    for attempt in range(retry_count):
+    # Extract keywords - remove stopwords to focus on important terms
+    keywords = []
+    stopwords = ["a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "with", "by", "about", "of"]
+    for word in topic.lower().split():
+        if word not in stopwords and len(word) > 2:
+            keywords.append(word)
+    
+    # Ensure we have at least one keyword (use the original topic if no keywords were extracted)
+    if not keywords:
+        keywords = [topic.split()[0]] if topic.split() else [topic]
+
+    print(f"Keywords extracted: {keywords}")
+    
+    # Define search strategies - all will include at least the primary keywords
+    search_strategies = []
+
+    # Strategy 1: Exact topic 
+    search_strategies.append(topic)
+
+    # Strategy 2: Primary keyword(s) - use up to 2 most important keywords
+    primary_keywords = " ".join(keywords[:2]) if len(keywords) > 1 else keywords[0]
+    search_strategies.append(primary_keywords)
+
+    # Strategy 3-5: Keywords + specific qualifiers for higher relevance
+    modifiers = ["diagram", "illustration", "example", "chart", "photo", "symbol", "logo"]
+    for i in range(min(3, len(modifiers))):
+        search_strategies.append(f"{primary_keywords} {modifiers[i]}")
+
+    # Strategy 6: Related broader term (if applicable)
+    if len(keywords) > 1:
+        search_strategies.append(keywords[0])
+
+    # Try each strategy in order until we find images
+    for attempt, search_term in enumerate(search_strategies[:retry_count]):
         try:
-            if attempt == 0:
-                # First attempt: search for the exact topic
-                search_term = topic
-            elif attempt == 1:
-                # Second attempt: try a broader search
-                search_term = topic.split()[0] if ' ' in topic else topic
-            else:
-                # Additional attempts: add some variety
-                modifiers = ["history", "diagram", "illustration", "example", "photo", "chart"]
-                search_term = f"{topic} {random.choice(modifiers)}"
-                
             print(f"Image search attempt {attempt+1}/{retry_count}: '{search_term}'")
             
-            # Search using the Wikipedia API
+            # First, try direct page search
             api_url = f"https://en.wikipedia.org/w/api.php?action=query&titles={quote(search_term)}&prop=images&format=json"
             response = requests.get(api_url, timeout=5)
             
@@ -147,7 +168,37 @@ def search_wikipedia_images(topic: str, retry_count: int = 6) -> List[str]:
                 # Extract images from the page
                 images = page_data.get('images', [])
                 
+                # Skip if page exists but no images found (try another method)
+                if not images and '-1' in pages:
+                    # Try a more direct search approach
+                    search_api_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={quote(search_term)}&format=json"
+                    search_response = requests.get(search_api_url, timeout=5)
+                    
+                    if search_response.status_code == 200:
+                        search_data = search_response.json()
+                        search_results = search_data.get('query', {}).get('search', [])
+                        
+                        # If we found actual pages, get images from the first result
+                        if search_results:
+                            first_result = search_results[0]
+                            page_title = first_result.get('title', '')
+                            
+                            if page_title:
+                                # Get images from this page
+                                image_api_url = f"https://en.wikipedia.org/w/api.php?action=query&titles={quote(page_title)}&prop=images&format=json"
+                                image_response = requests.get(image_api_url, timeout=5)
+                                
+                                if image_response.status_code == 200:
+                                    image_data = image_response.json()
+                                    image_pages = image_data.get('query', {}).get('pages', {})
+                                    
+                                    if image_pages:
+                                        first_page_id = next(iter(image_pages))
+                                        first_page = image_pages[first_page_id]
+                                        images = first_page.get('images', [])
+                
                 # Filter for usable image formats and convert to URLs
+                filtered_images = []
                 for img in images:
                     filename = img.get('title', '')
                     if not filename.startswith('File:'):
@@ -156,6 +207,14 @@ def search_wikipedia_images(topic: str, retry_count: int = 6) -> List[str]:
                     # Remove the 'File:' prefix
                     filename = filename[5:]
                     
+                    # Skip irrelevant images or commons categories
+                    if any(skip in filename.lower() for skip in ["icon", "logo", "commons", "wiki", "category", "placeholder"]):
+                        continue
+
+                    # Skip small icons or purely decorative images
+                    if re.search(r"icon|button|bullet|arrow|pixel|^dot-", filename.lower()):
+                        continue
+                    
                     # Check if it's an image format we can use
                     if re.search(r"\.(jpg|jpeg|png|svg|gif)$", filename, re.IGNORECASE):
                         # Use the Wikipedia Special:Redirect URL
@@ -163,16 +222,40 @@ def search_wikipedia_images(topic: str, retry_count: int = 6) -> List[str]:
                         
                         # Verify the URL exists and works
                         if verify_url_exists(image_url):
-                            image_urls.append(image_url)
+                            # Check relevance by seeing if any keyword is in the filename
+                            name_without_extension = re.sub(r"\.(jpg|jpeg|png|svg|gif)$", "", filename.lower(), flags=re.IGNORECASE)
+                            words_in_filename = re.findall(r'\w+', name_without_extension)
+                            
+                            # Score the image by relevance (keywords in filename)
+                            relevance_score = 0
+                            for keyword in keywords:
+                                if keyword.lower() in words_in_filename:
+                                    relevance_score += 2
+                                elif any(keyword.lower() in word for word in words_in_filename):
+                                    relevance_score += 1
+                            
+                            filtered_images.append((image_url, relevance_score))
+                
+                # Sort by relevance score and add to results
+                if filtered_images:
+                    # Sort by relevance score (highest first)
+                    filtered_images.sort(key=lambda x: x[1], reverse=True)
+                    
+                    # Add top images to our results (up to 3 per page)
+                    for url, score in filtered_images[:3]:
+                        if url not in image_urls:  # Avoid duplicates
+                            image_urls.append(url)
                             
             # If we found at least some images, we can return
             if image_urls:
+                print(f"Found {len(image_urls)} relevant images")
                 return image_urls
                 
         except Exception as e:
             print(f"Error searching Wikipedia for images on attempt {attempt+1}: {e}")
     
     # If we get here, we couldn't find any valid images
+    print("Could not find any relevant images after all attempts")
     return []
 
 # ---------------------------------------------------------------------------
@@ -313,8 +396,27 @@ def query_gpt(user_prompt: str):
                 
                 # Use one of the found images if available
                 if search_images:
-                    image = random.choice(search_images)
-                    print(f"Found alternative image for '{title}'")
+                    # Try each image until we find a matching one
+                    found_match = False
+                    for img_url in search_images:
+                        # Verify the image matches the title/content
+                        is_match, validated_caption = verify_image_caption_match(
+                            img_url, caption, title, content
+                        )
+                        
+                        if is_match:
+                            image = img_url
+                            caption = validated_caption  # Use the validated/improved caption
+                            print(f"Found matching image for '{title}'")
+                            found_match = True
+                            break
+                    
+                    # If no match found, use first image but flag it
+                    if not found_match and search_images:
+                        image = search_images[0]
+                        print(f"No perfect match found, using best available image for '{title}'")
+                    elif not search_images:
+                        image = None
                 else:
                     print(f"No alternative image found for '{title}', using default.")
                     image = None  # Don't use a default image
@@ -323,7 +425,42 @@ def query_gpt(user_prompt: str):
                 print(f"No image available for '{title}'")
                 caption = ""  # Clear caption when no image
         else:
-            print(f"Using original image for '{title}'")
+            # Verify the original image matches the caption
+            is_match, validated_caption = verify_image_caption_match(
+                image, caption, title, content
+            )
+            
+            if is_match:
+                caption = validated_caption  # Use the validated/improved caption
+                print(f"Verified original image for '{title}'")
+            else:
+                print(f"Original image doesn't match caption for '{title}', searching for alternative...")
+                # Search for a better match
+                search_images = search_wikipedia_images(title)
+                
+                if search_images:
+                    # Try each image until we find a matching one
+                    found_match = False
+                    for img_url in search_images:
+                        # Verify the image matches the title/content
+                        is_match, validated_caption = verify_image_caption_match(
+                            img_url, caption, title, content
+                        )
+                        
+                        if is_match:
+                            image = img_url
+                            caption = validated_caption
+                            print(f"Found better matching image for '{title}'")
+                            found_match = True
+                            break
+                    
+                    # If no match found but we have images, use first image
+                    if not found_match and search_images:
+                        image = search_images[0]
+                        print(f"Using best available alternative for '{title}'")
+                else:
+                    # We'll keep the original image even if it's not a perfect match
+                    print(f"Keeping original image for '{title}' despite imperfect match")
 
         yield title, content, image, caption
 
@@ -403,6 +540,121 @@ def hsv_to_rgb(h: float, s: float, v: float) -> Tuple[int,int,int]:
     elif h_i == 4: r, g, b = t, p, v
     else:          r, g, b = v, p, q
     return int(r*255), int(g*255), int(b*255)
+
+# ---------------------------------------------------------------------------
+# Image-caption validation
+# ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=64)
+def verify_image_caption_match(image_url: str, caption: str, title: str, content: str) -> Tuple[bool, str]:
+    """
+    Verify if an image matches its caption using OpenAI's vision capabilities.
+    
+    Args:
+        image_url: URL of the image to check
+        caption: Caption provided for the image
+        title: Title of the note/card
+        content: Content of the note/card
+
+    Returns:
+        Tuple of (is_match: bool, new_caption: str)
+        - is_match: True if the image matches the caption/context
+        - new_caption: Original or improved caption based on analysis
+    """
+    try:
+        # Skip if no caption or no image
+        if not caption or not image_url:
+            return False, ""
+
+        print(f"Validating image-caption match for '{title}'")
+        
+        # First, try a simpler text-based validation
+        # Extract keywords from caption
+        caption_keywords = extract_keywords(caption)
+        title_keywords = extract_keywords(title)
+        
+        # Extract filename from URL
+        filename = image_url.split('/')[-1]
+        if 'File:' in filename:
+            filename = filename.split('File:')[-1]
+        
+        # Clean up filename
+        filename = re.sub(r'\.(jpg|jpeg|png|svg|gif)$', '', filename, flags=re.IGNORECASE)
+        filename = filename.replace('_', ' ').replace('-', ' ')
+        
+        # Check if enough keywords match
+        filename_words = set(extract_keywords(filename))
+        caption_match = any(keyword in filename_words for keyword in caption_keywords)
+        title_match = any(keyword in filename_words for keyword in title_keywords)
+        
+        # If we already have a strong text match, don't use the API
+        if caption_match or title_match:
+            print(f"Text-based validation successful for '{title}'")
+            return True, caption
+        
+        # For more complex cases, we'll use Vision API
+        try:
+            # Prepare the messages for vision API
+            context = f"Title: {title}\nContent: {content}"
+            
+            # Call the vision API
+            vision_response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are an assistant that verifies if an image matches a caption and educational context."},
+                    {"role": "user", "content": [
+                        {"type": "text", "text": f"Educational context: {context}\n\nCaption: {caption}\n\nVerify if this image accurately represents the educational concept and caption. Answer ONLY with 'MATCH' or 'MISMATCH', followed by a better caption if needed."},
+                        {"type": "image_url", "image_url": {"url": image_url}}
+                    ]}
+                ],
+                max_tokens=150
+            )
+            
+            # Process the response
+            response_text = vision_response.choices[0].message.content
+            print(f"Vision API response: {response_text[:50]}...")
+            
+            # Check if it's a match
+            is_match = "MATCH" in response_text.upper().split()[0]
+            
+            # Extract improved caption if provided
+            new_caption = caption
+            if is_match and len(response_text) > 10:
+                # Try to extract a better caption if provided
+                caption_start = response_text.find(":")
+                if caption_start > 0:
+                    new_caption = response_text[caption_start+1:].strip()
+                    # Truncate if too long
+                    if len(new_caption) > 150:
+                        new_caption = new_caption[:147] + "..."
+            
+            return is_match, new_caption
+            
+        except Exception as e:
+            print(f"Vision API error: {e} - falling back to text matching")
+            # Fall back to text matching
+            return caption_match or title_match, caption
+        
+    except Exception as e:
+        print(f"Error verifying image-caption match: {e}")
+        return False, caption
+
+def extract_keywords(text: str) -> List[str]:
+    """Extract meaningful keywords from text, removing stopwords."""
+    if not text:
+        return []
+        
+    stopwords = ["a", "an", "the", "and", "or", "but", "in", "on", "at", "to", 
+                "for", "with", "by", "about", "of", "this", "that", "these", 
+                "those", "is", "are", "was", "were", "be", "been", "being", 
+                "have", "has", "had", "do", "does", "did", "can", "could", 
+                "will", "would", "shall", "should", "may", "might", "must"]
+                
+    # Convert to lowercase and split
+    words = re.findall(r'\w+', text.lower())
+    
+    # Filter out stopwords and short words
+    return [word for word in words if word not in stopwords and len(word) > 2]
 
 if __name__ == "__main__":
     import uvicorn
