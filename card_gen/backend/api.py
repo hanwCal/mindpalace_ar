@@ -35,10 +35,10 @@ app.add_middleware(
 )
 
 # initialize OpenAI client with API key
-client = OpenAI(api_key="YOUR_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Default placeholder image URL (served directly from Wikipedia)
-DEFAULT_IMAGE_URL = "https://en.wikipedia.org/static/images/project-logos/enwiki.png"
+DEFAULT_IMAGE_URL = ""  # Removed default placeholder
 
 PROMPT = """You are an expert educational assistant. Your task is to help a user learn a specific topic by generating a list of up to 12 concise learning notes, each formatted as:
 - Title: 1 short, specific line
@@ -51,7 +51,7 @@ DO NOT MAKE UP IMAGES!!! ONLY FETCH EXISTING IMAGES FROM WIKIPEDIA PAGE.
 1. ONLY provide direct image URLs (https://...) that end with .jpg, .png, .svg, or .gif extensions
 2. Prefer images that can be served directly from Wikipedia (e.g. https://en.wikipedia.org/wiki/Special:FilePath/...), otherwise fall back to Wikimedia Commons or other public-domain sources
 3. For each note, search for an image relevant to that specific point, not just the general topic
-4. If you cannot find a suitable image, use this placeholder: """ + DEFAULT_IMAGE_URL + """
+4. If you cannot find a suitable image, leave the image URL blank
 
 Each note should focus on one key idea, suitable for placement in a memory palace. To make learning more effective and engaging, vary the type of information across cards. Focus on clarity, usefulness, and learning value."""
 
@@ -383,8 +383,22 @@ def query_gpt(user_prompt: str):
             # First check our title-based cache
             if title in title_to_images_map and title_to_images_map[title]:
                 # We already found images for this title, use one of them
-                image = random.choice(title_to_images_map[title])
-                print(f"Using cached image for '{title}'")
+                candidate_image = random.choice(title_to_images_map[title])
+                
+                # Verify the image matches the title/content
+                is_match, validated_caption = verify_image_caption_match(
+                    candidate_image, caption, title, content
+                )
+                
+                if is_match:
+                    image = candidate_image
+                    caption = validated_caption
+                    print(f"Using cached image for '{title}'")
+                else:
+                    # Not a good match, leave blank
+                    image = ""
+                    caption = ""
+                    print(f"Cached image not relevant for '{title}', leaving blank")
             else:
                 # Search for images related to this title/concept
                 search_images = search_wikipedia_images(title)
@@ -414,19 +428,16 @@ def query_gpt(user_prompt: str):
                             found_match = True
                             break
                     
-                    # If no match found, use first image but flag it
-                    if not found_match and search_images:
-                        image = search_images[0]
-                        print(f"No perfect match found, using best available image for '{title}'")
-                    elif not search_images:
-                        image = None
+                    # If no match found, leave blank
+                    if not found_match:
+                        image = ""
+                        caption = ""
+                        print(f"No relevant image found for '{title}', leaving blank")
                 else:
-                    print(f"No alternative image found for '{title}', using default.")
-                    image = None  # Don't use a default image
+                    print(f"No alternative image found for '{title}', leaving blank")
+                    image = ""
+                    caption = ""
             
-            if image is None:
-                print(f"No image available for '{title}'")
-                caption = ""  # Clear caption when no image
         else:
             # Verify the original image matches the caption
             is_match, validated_caption = verify_image_caption_match(
@@ -457,13 +468,16 @@ def query_gpt(user_prompt: str):
                             found_match = True
                             break
                     
-                    # If no match found but we have images, use first image
-                    if not found_match and search_images:
-                        image = search_images[0]
-                        print(f"Using best available alternative for '{title}'")
+                    # If no match found, leave blank
+                    if not found_match:
+                        image = ""
+                        caption = ""
+                        print(f"No relevant image found for '{title}', leaving blank")
                 else:
-                    # We'll keep the original image even if it's not a perfect match
-                    print(f"Keeping original image for '{title}' despite imperfect match")
+                    # Leave blank since original is not a match
+                    image = ""
+                    caption = ""
+                    print(f"No relevant image found for '{title}', leaving blank")
 
         yield title, content, image, caption
 
