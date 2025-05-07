@@ -44,7 +44,7 @@ PROMPT = """You are an expert educational assistant. Your task is to help a user
 - Title: 1 short, specific line
 - Content: 1-2 sentences explaining the key concept in sufficient detail. No more than 20 words intotal. Aim for clarity and depth while staying concise. You may use simple Markdown formatting if helpful.
 - Image: IMPORTANT - For each note, provide a URL to a relevant image. Look for images on Wikipedia pages related to the topic. Use only freely available and public domain images.
-- Caption: Add a brief, descriptive caption (1-2 sentences) for the image that explains what it shows.
+- Caption: Add a brief, descriptive caption (1 sentences) for the image that explains what it shows. No longer than 10 words.
 
 CRITICAL INSTRUCTIONS FOR IMAGES:
 DO NOT MAKE UP IMAGES!!! ONLY FETCH EXISTING IMAGES FROM WIKIPEDIA PAGE.

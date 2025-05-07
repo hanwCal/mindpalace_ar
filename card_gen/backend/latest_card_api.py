@@ -23,7 +23,7 @@ class Card(BaseModel):
     position: Position = Position()
     imageUrl: str
     color: str = "#FFD700"
-    caption: str
+    imageCaption: str
 
 app = FastAPI()
 
@@ -56,7 +56,7 @@ def format_cards(raw_cards: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "position": {"x": 0.0, "y": 0.0, "z": 0.0},
             "imageUrl": card.get("image", ""),
             "color": "#FFD700",
-            "caption": card.get("caption", "")
+            "imageCaption": card.get("caption", "")
         }
         formatted_cards.append(formatted_card)
     return formatted_cards
