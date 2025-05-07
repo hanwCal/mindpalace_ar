@@ -42,7 +42,7 @@ DEFAULT_IMAGE_URL = "https://en.wikipedia.org/static/images/project-logos/enwiki
 
 PROMPT = """You are an expert educational assistant. Your task is to help a user learn a specific topic by generating a list of up to 12 concise learning notes, each formatted as:
 - Title: 1 short, specific line
-- Content: 2-3 sentences explaining the key concept in sufficient detail. Aim for clarity and depth while staying concise. You may use simple Markdown formatting if helpful.
+- Content: 1-2 sentences explaining the key concept in sufficient detail. No more than 20 words intotal. Aim for clarity and depth while staying concise. You may use simple Markdown formatting if helpful.
 - Image: IMPORTANT - For each note, provide a URL to a relevant image. Look for images on Wikipedia pages related to the topic. Use only freely available and public domain images.
 - Caption: Add a brief, descriptive caption (1-2 sentences) for the image that explains what it shows.
 
