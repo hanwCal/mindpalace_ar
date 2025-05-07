@@ -35,7 +35,7 @@ app.add_middleware(
 )
 
 # initialize OpenAI client with API key
-client = OpenAI(api_key="YOUR_KEY_HERE")
+client = OpenAI(api_key="YOUR_API_KEY")
 
 # Default placeholder image URL (served directly from Wikipedia)
 DEFAULT_IMAGE_URL = "https://en.wikipedia.org/static/images/project-logos/enwiki.png"

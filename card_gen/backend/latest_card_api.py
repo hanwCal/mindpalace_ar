@@ -56,4 +56,4 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("latest_cards_api:app", host="0.0.0.0", port=8001) 
+    uvicorn.run("latest_card_api:app", host="0.0.0.0", port=8001) 
