@@ -20,6 +20,9 @@ from openai import OpenAI
 # load env variables
 load_dotenv()
 
+# Define output file path for latest generated cards
+LATEST_CARDS_FILE = os.path.join(os.path.dirname(__file__), "latest_cards.json")
+
 app = FastAPI()
 
 # Configure CORS
@@ -32,7 +35,7 @@ app.add_middleware(
 )
 
 # initialize OpenAI client with API key
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+client = OpenAI(api_key="YOUR_KEY_HERE")
 
 # Default placeholder image URL (served directly from Wikipedia)
 DEFAULT_IMAGE_URL = "https://en.wikipedia.org/static/images/project-logos/enwiki.png"
@@ -482,6 +485,14 @@ async def generate_notes(request: Request):
             "caption": caption
         })
         last_id += 1
+
+    # Save the latest generated cards to a file
+    try:
+        with open(LATEST_CARDS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cards_out, f, ensure_ascii=False, indent=2)
+        print(f"Saved latest cards to {LATEST_CARDS_FILE}")
+    except Exception as e:
+        print(f"Error saving cards to file: {e}")
 
     return cards_out
 
