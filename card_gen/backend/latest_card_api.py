@@ -8,13 +8,22 @@ from pydantic import BaseModel
 # Define the path to the latest cards file
 LATEST_CARDS_FILE = os.path.join(os.path.dirname(__file__), "latest_cards.json")
 
+# Define position model
+class Position(BaseModel):
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+
 # Define the card model
 class Card(BaseModel):
-    id: int
+    id: str
+    anchor: str = "Null"
     title: str
-    content: str
-    image: str
-    caption: str
+    description: str
+    position: Position = Position()
+    imageUrl: str
+    color: str = "#FFD700"
+    Caption: str
 
 app = FastAPI()
 
@@ -29,16 +38,19 @@ app.add_middleware(
 
 def format_cards(raw_cards: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    Ensure cards are properly formatted with all required fields.
-    If a card is missing any required fields, they will be filled with empty strings.
+    Ensure cards are properly formatted with all required fields and convert
+    from original format to the downstream app format.
     """
     formatted_cards = []
     for i, card in enumerate(raw_cards):
         formatted_card = {
-            "id": card.get("id", i),
+            "id": card.get("id", f"Card-{i}"),
+            "anchor": "Null",
             "title": card.get("title", ""),
-            "content": card.get("content", ""),
-            "image": card.get("image", ""),
+            "description": card.get("content", ""),
+            "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+            "imageUrl": card.get("image", ""),
+            "color": "#FFD700",
             "caption": card.get("caption", "")
         }
         formatted_cards.append(formatted_card)
