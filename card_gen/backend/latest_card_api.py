@@ -23,7 +23,7 @@ class Card(BaseModel):
     position: Position = Position()
     imageUrl: str
     color: str = "#FFD700"
-    Caption: str
+    caption: str
 
 app = FastAPI()
 
@@ -43,8 +43,13 @@ def format_cards(raw_cards: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     formatted_cards = []
     for i, card in enumerate(raw_cards):
+        card_id = card.get("id", i)
+        # Convert id to string if it's not already
+        if not isinstance(card_id, str):
+            card_id = str(card_id)
+            
         formatted_card = {
-            "id": card.get("id", f"Card-{i}"),
+            "id": card_id,
             "anchor": "Null",
             "title": card.get("title", ""),
             "description": card.get("content", ""),

@@ -35,12 +35,12 @@ app.add_middleware(
 )
 
 # initialize OpenAI client with API key
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+client = OpenAI(api_key="YOUR_API_KEY")
 
 # Default placeholder image URL (served directly from Wikipedia)
 DEFAULT_IMAGE_URL = "https://en.wikipedia.org/static/images/project-logos/enwiki.png"
 
-PROMPT = """You are an expert educational assistant. Your task is to help a user learn a specific topic by generating a list of up to 10 concise learning notes, each formatted as:
+PROMPT = """You are an expert educational assistant. Your task is to help a user learn a specific topic by generating a list of up to 12 concise learning notes, each formatted as:
 - Title: 1 short, specific line
 - Content: 2-3 sentences explaining the key concept in sufficient detail. Aim for clarity and depth while staying concise. You may use simple Markdown formatting if helpful.
 - Image: IMPORTANT - For each note, provide a URL to a relevant image. Look for images on Wikipedia pages related to the topic. Use only freely available and public domain images.
