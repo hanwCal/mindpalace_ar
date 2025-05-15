@@ -1,0 +1,86 @@
+[
+  {
+    "id": 0,
+    "title": "African Elephant",
+    "content": "Largest land mammal, known for its tusks and large ears.",
+    "image": "",
+    "caption": ""
+  },
+  {
+    "id": 1,
+    "title": "Lion",
+    "content": "Apex predator known as 'King of the Jungle' despite living in savannas.",
+    "image": "https://en.wikipedia.org/wiki/Special:FilePath/Lion_waiting_in_Namibia.jpg",
+    "caption": "Lion resting in the grass."
+  },
+  {
+    "id": 2,
+    "title": "Cheetah",
+    "content": "Fastest land animal, capable of speeds up to 60-70 mph.",
+    "image": "https://en.wikipedia.org/wiki/Special:Redirect/file/Acinonyx%20jubatus%20%28white%20background%29.jpg",
+    "caption": "Illustration of a cheetah."
+  },
+  {
+    "id": 3,
+    "title": "Giraffe",
+    "content": "Tallest terrestrial animal with a long neck for reaching trees.",
+    "image": "https://en.wikipedia.org/wiki/Special:Redirect/file/Flickr%20-%20Rainbirder%20-%20Reticulated%20Giraffe%20drinking.jpg",
+    "caption": "Giraffe with its distinctive long neck."
+  },
+  {
+    "id": 4,
+    "title": "African Buffalo",
+    "content": "Strong herbivore known for its unpredictable nature and large herds.",
+    "image": "",
+    "caption": ""
+  },
+  {
+    "id": 5,
+    "title": "Rhinoceros",
+    "content": "Large herbivores known for their distinct horn(s) on their snout.",
+    "image": "https://en.wikipedia.org/wiki/Special:Redirect/file/D%C3%BCrer%20-%20Rhinoceros.jpg",
+    "caption": "Historical illustration of a Rhinoceros by Albrecht Dürer."
+  },
+  {
+    "id": 6,
+    "title": "Hippopotamus",
+    "content": "Semi-aquatic mammals known for their massive size and large jaws.",
+    "image": "",
+    "caption": ""
+  },
+  {
+    "id": 7,
+    "title": "Zebra",
+    "content": "Known for its distinctive black and white striped coat.",
+    "image": "",
+    "caption": ""
+  },
+  {
+    "id": 8,
+    "title": "Gorilla",
+    "content": "Largest primate, found primarily in central African forests.",
+    "image": "https://en.wikipedia.org/wiki/Special:FilePath/Male_gorilla_in_SF_zoo.jpg",
+    "caption": "Male Gorilla in a forest."
+  },
+  {
+    "id": 9,
+    "title": "Crocodile",
+    "content": "Large aquatic reptiles found in African rivers and lakes.",
+    "image": "https://en.wikipedia.org/wiki/Special:Redirect/file/Caiman%20crocodilus%20llanos%20white%20background.JPG",
+    "caption": "Crocodile isolated on white background."
+  },
+  {
+    "id": 10,
+    "title": "Wildebeest",
+    "content": "Known for their migratory behavior, part of the Great Migration.",
+    "image": "https://en.wikipedia.org/wiki/Special:Redirect/file/Blackbuck%20male%20female.jpg",
+    "caption": "\"Blackbuck antelope grazing in the grassland.\""
+  },
+  {
+    "id": 11,
+    "title": "Flamingo",
+    "content": "Wading bird known for its pink feathers and long legs.",
+    "image": "https://en.wikipedia.org/wiki/Special:Redirect/file/Flamingo%20range.png",
+    "caption": "Lesser Flamingo in a lake."
+  }
+]
