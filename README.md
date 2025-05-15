@@ -68,6 +68,8 @@ The web application will be accessible through your browser at the default addre
 
 ### VisionOS Application
 
+Due to the size limit of Github, please find the build of VisionOS app using your berkeley.edu email at: https://drive.google.com/drive/folders/1auQYSXFLZcISYHf0xesQitlThkURnPP2?usp=sharing
+
 #### Requirements
 - Xcode 15.0 or later
 - VisionOS SDK 2.0 or later
